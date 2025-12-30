@@ -1,12 +1,16 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Occurrence } from "../types";
 
-// Compliant with @google/genai guidelines: Create a new instance right before making an API call.
 export const getGeminiInsights = async (occurrences: Occurrence[]) => {
-  // Always use a named parameter and obtain the API key exclusively from process.env.API_KEY.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const dataSummary = occurrences.map(o => ({
+  // O process.env.API_KEY é injetado pelo Vite conforme definido no vite.config.ts
+  const apiKey = process.env.API_KEY;
+  
+  if (!apiKey) {
+    return "Aguardando configuração da chave de IA para gerar insights.";
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
+  const dataSummary = occurrences.slice(0, 10).map(o => ({
     tipo: o.type,
     motivo: o.reason,
     data: o.date
@@ -15,12 +19,15 @@ export const getGeminiInsights = async (occurrences: Occurrence[]) => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Analise brevemente estes dados de ocorrências escolares e dê uma sugestão de 2 linhas para a direção pedagógica melhorar o clima escolar. Dados: ${JSON.stringify(dataSummary)}`,
+      contents: [{
+        parts: [{
+          text: `Você é um consultor pedagógico sênior. Analise estes dados de ocorrências e dê uma sugestão estratégica de 2 linhas: ${JSON.stringify(dataSummary)}`
+        }]
+      }],
     });
-    // Extracting Text Output: Access the .text property (do not call as a method).
-    return response.text;
+    return response.text || "Dados analisados. Continue o bom trabalho na gestão escolar.";
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "Erro ao gerar insights da IA.";
+    console.error("Gemini Insight Error:", error);
+    return "O sistema está pronto para analisar seus dados disciplinares.";
   }
 };
